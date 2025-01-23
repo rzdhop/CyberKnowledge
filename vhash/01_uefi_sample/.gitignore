@@ -2,3 +2,4 @@ gnu-efi/*
 *.o
 *.so
 *.efi
+*.img
