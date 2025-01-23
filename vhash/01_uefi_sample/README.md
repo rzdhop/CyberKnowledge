@@ -79,7 +79,7 @@ qemu-system-x86_64 --boot menu=on -net none \
 
 - if binary is not named `BOOTX64.EFI` you should run it from the EFI Shell :
 
-![demo](demo.png)
+![demo](./assets/demo.png)
 
 ### Bare-metal
 
