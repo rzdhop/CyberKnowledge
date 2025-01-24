@@ -16,7 +16,7 @@
 //CPL cmd > g++ .\mempatcher.cpp -lpsapi -o mempatcher.exe
 
 int main(int argc, char** argv) {
-    int choice, isAttached;
+    int choice;
     DWORD pID = -1;
     std::vector<patch_action> patch_tasks;
 
@@ -33,15 +33,13 @@ int main(int argc, char** argv) {
     switch (choice) {
     case 1:
         pID = CreateProc();
-        isAttached = 0;
         break;
     case 2:
         pID = selectProcess();
-        isAttached = 1;
         break;
     case 0:
         printf("\n[-]Bye !");
-        return 0;
+        break;
     default:
         printf("Unknown choice!\n");
         break;
@@ -64,7 +62,7 @@ int main(int argc, char** argv) {
         printf("|    3) [list]            |\n");
         printf("|    4) [add]             |\n");
         printf("|    5) [del]             |\n");
-        if (isAttached) 
+        printf("|                         |\n");
         printf("|    6) resumeProc        |\n");
         printf("|                         |\n");
         printf("|    0) Exit              |\n");
@@ -89,8 +87,7 @@ int main(int argc, char** argv) {
             delPatchActions(&patch_tasks);
             break;
         case 6:
-            if (isAttached)
-                ResumeProc(pID);
+            ResumeProc(pID);
             break;
         case 0:
             printf("\n[-]Bye !");
