@@ -87,7 +87,7 @@ int main(int argc, char** argv) {
             delPatchActions(&patch_tasks);
             break;
         case 6:
-            ResumeProc(pID);
+            interceptBreakpoints(pID, &patch_tasks);
             break;
         case 0:
             printf("\n[-]Bye !");

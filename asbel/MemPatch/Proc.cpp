@@ -77,7 +77,7 @@ void dumpMem(DWORD pID) {
     // Allocation du buffer
     std::vector<unsigned char> bytes_buffer(dumpSize, 0);
 
-    // Lecture mémoire
+    // Lecture mÃ©moire
     size_t actuallyRead = _dump(pID, lpBaseAddress, bytes_buffer.data(), dumpSize);
     if (actuallyRead > 0) {
         pretty_print(bytes_buffer.data(), actuallyRead, startAddr);
@@ -97,7 +97,7 @@ void patchMem(DWORD pID) {
     uintptr_t patchAddr = std::stoull(addr_str, nullptr, 16);
     LPVOID lpBaseAddress = reinterpret_cast<LPVOID>(patchAddr);
 
-    // Lecture des données à patcher (ex : "90 90 90")
+    // Lecture des donnÃ©es Ã  patcher (ex : "90 90 90")
     printf("Hex bytes to write (e.g. 90 90 90) : ");
     std::cin.ignore();
     std::string input;
@@ -125,7 +125,7 @@ void patchMem(DWORD pID) {
         size_t dumpSize = 256;
         std::vector<unsigned char> bytes_buffer(dumpSize, 0);
 
-        // Lire les nouvelles données pour les afficher
+        // Lire les nouvelles donnÃ©es pour les afficher
         size_t actuallyRead = _dump(pID, patch.patch_addr, bytes_buffer.data(), dumpSize);
         if (actuallyRead > 0) {
             pretty_print(bytes_buffer.data(), actuallyRead, static_cast<uintptr_t>(patchAddr));
@@ -133,12 +133,11 @@ void patchMem(DWORD pID) {
     }
 }
 
-
 bool ResumeProc(DWORD pID) {
     // https://www.pinvoke.net/default.aspx/ntdll/NtResumeProcess.html
-    // Récupère la fonction NtResumeProcess de ntdll.dll
+    // RÃ©cupÃ¨re la fonction NtResumeProcess de ntdll.dll
     /*
-        NtResumeProcess_t défini par :
+        NtResumeProcess_t dÃ©fini par :
             - NTSTATUS WINAPI <function>(HANDLE){}
             - <retType> <function> <ArgType>
 
@@ -179,6 +178,43 @@ bool ResumeProc(DWORD pID) {
     return true;
 }
 
+void interceptBreakpoints(DWORD pID, std::vector<patch_action>* patch_tasks) {
+    // Attacher le processus pour le dÃ©bogage
+    if (!DebugActiveProcess(pID)) {
+        std::cerr << "DebugActiveProcess failed: " << GetLastError() << std::endl;
+        return;
+    }
+
+    // Maybe One day implement anti-debuug patches 
+
+    ResumeProc(pID);
+
+    DEBUG_EVENT dbgEvent = { 0 };
+    bool debugging = true;
+    while (debugging) {
+        if (WaitForDebugEvent(&dbgEvent, INFINITE)) {
+            DWORD continueStatus = DBG_CONTINUE;
+
+            if (dbgEvent.dwDebugEventCode == EXCEPTION_DEBUG_EVENT) {
+                EXCEPTION_RECORD exception = dbgEvent.u.Exception.ExceptionRecord;
+                // Pour un hardware breakpoint d'exÃ©cution, l'exception est souvent EXCEPTION_SINGLE_STEP
+                if (exception.ExceptionCode == EXCEPTION_SINGLE_STEP) {
+                    for (patch_action action : *patch_tasks) {
+                        if (exception.ExceptionAddress == action.hwbp_addr) {
+                            std::cout << "Breakpoint hit at address: " << action.hwbp_addr << std::endl;
+                            _patch(pID, action);
+                        }
+                    }
+                }
+            }
+            else if (dbgEvent.dwDebugEventCode == EXIT_PROCESS_DEBUG_EVENT) {
+                debugging = false;
+            }
+            // Continuer l'exÃ©cution de l'Ã©vÃ©nement traitÃ©
+            ContinueDebugEvent(dbgEvent.dwProcessId, dbgEvent.dwThreadId, continueStatus);
+        }
+    }
+}
 
 int CreateProc() {
     printf("Enter path to executable : \n> ");
@@ -201,19 +237,19 @@ int CreateProc() {
     PROCESS_INFORMATION pi = { 0 };
     si.cb = sizeof(STARTUPINFOA);
 
-    // Combiner le chemin de l'exécutable et ses arguments
+    // Combiner le chemin de l'exÃ©cutable et ses arguments
     std::string cmdLine = "\"" + input + "\" " + args;
 
     BOOL result = CreateProcessA(
         input.c_str(),
         cmdLine.data(),
-        nullptr,          // Pas de sécurité pour le processus
-        nullptr,          // Pas de sécurité pour le thread
-        FALSE,            // Héritage des handles non permis
+        nullptr,          // Pas de sÃ©curitÃ© pour le processus
+        nullptr,          // Pas de sÃ©curitÃ© pour le thread
+        FALSE,            // HÃ©ritage des handles non permis
         CREATE_SUSPENDED | CREATE_NEW_CONSOLE,
-        nullptr,          // Variables d'environnement (null = hérite)
-        nullptr,          // Répertoire de travail courant
-        &si,              // Informations sur la fenêtre
+        nullptr,          // Variables d'environnement (null = hÃ©rite)
+        nullptr,          // RÃ©pertoire de travail courant
+        &si,              // Informations sur la fenÃªtre
         &pi               // Informations sur le processus
     );
 

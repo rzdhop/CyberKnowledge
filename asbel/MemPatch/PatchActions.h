@@ -3,8 +3,8 @@
 #include <vector>
 
 struct patch_action {
-    LPVOID hwbp_addr;
-    LPVOID patch_addr;
+    LPVOID hwbp_addr = nullptr;
+    LPVOID patch_addr = nullptr;
     std::vector<unsigned char> patchBytes;
 };
 
