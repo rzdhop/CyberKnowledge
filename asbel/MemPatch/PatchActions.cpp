@@ -52,7 +52,7 @@ void delPatchActions(std::vector<patch_action>* patch_tasks) {
     
     listPatchActions(*patch_tasks);
 
-    printf("Entrez l'index du patch à supprimer (0-%u) : ", patch_tasks->size() - 1);
+    printf("Entrez l'index du patch à supprimer (0-%zu) : ", patch_tasks->size() - 1);
     size_t index;
     std::cin >> index;
     if (index >= patch_tasks->size()) {
