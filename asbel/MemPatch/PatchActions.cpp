@@ -41,18 +41,18 @@ void addPatchActions(std::vector<patch_action>* patch_tasks) {
     }
 
     patch_tasks->push_back(action);
-    printf("Patch action ajoutée.\n");
+    printf("Patch action ajoutÃ©e.\n");
 }
 
 void delPatchActions(std::vector<patch_action>* patch_tasks) {
     if (patch_tasks->empty()) {
-        printf("Aucune patch action à supprimer.\n");
+        printf("Aucune patch action a supprimer.\n");
         return;
     }
     
     listPatchActions(*patch_tasks);
 
-    printf("Entrez l'index du patch à supprimer (0-%zu) : ", patch_tasks->size() - 1);
+    printf("Entrez l'index du patch a supprimer (0-%zu) : ", patch_tasks->size() - 1);
     size_t index;
     std::cin >> index;
     if (index >= patch_tasks->size()) {
@@ -60,6 +60,6 @@ void delPatchActions(std::vector<patch_action>* patch_tasks) {
         return;
     }
     patch_tasks->erase(patch_tasks->begin() + index);
-    printf("Patch action supprimée.\n");
+    printf("Patch action supprimï¿½e.\n");
 }
 
