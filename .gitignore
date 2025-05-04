@@ -1,3 +1,13 @@
 /.vs
 /.vscode
 /.vscode
+*.vsidx
+*.tlog
+*.pdb
+*.sys
+*.cer
+*.recipe
+*.ipch
+*.log
+/asbel/CallbackEnum/.vs
+/asbel/SSDTEnum/.vs
