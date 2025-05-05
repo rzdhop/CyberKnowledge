@@ -11,3 +11,7 @@
 *.log
 /asbel/CallbackEnum/.vs
 /asbel/SSDTEnum/.vs
+/asbel/Enumerator/callbackEnum/x64
+/asbel/Enumerator/.vs
+/asbel/Enumerator/x64
+/asbel/Enumerator/client_callbackEnum/x64
