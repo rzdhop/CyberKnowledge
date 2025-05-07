@@ -1,5 +1,6 @@
 ﻿#include <ntifs.h>
-
+#pragma warning(disable: 28252)   // evite le warning pour la non definition de IoCreateDriver
+ 
 #define IOCTL_ENUM_PROC_CB CTL_CODE(FILE_DEVICE_UNKNOWN, 0x501, METHOD_BUFFERED, FILE_SPECIAL_ACCESS)
 
 //Define Unexported/Undocumented function from ntifs.h
@@ -16,7 +17,55 @@ extern "C" {
 	*/
 }
 
-VOID do_enumProcessCallbacks(PULONG buffer, PSIZE_T count);
+VOID do_enumProcessCallbacks(PULONG64 buffer, PSIZE_T count) {
+	*count = 0;
+	__try {
+		UNICODE_STRING us = RTL_CONSTANT_STRING(L"PsSetCreateProcessNotifyRoutine");
+		PUCHAR psStub = (PUCHAR)MmGetSystemRoutineAddress(&us);
+		PUCHAR pspStub = nullptr;
+		if (!psStub) return;
+		DbgPrint("[CallbackEnum] PsSetCreateProcessNotifyRoutine : %p", psStub);
+
+		//De PsSetCreateProcessNotifyRoutine -> PspSetCreateProcessNotifyRoutine
+		for (SIZE_T i = 0; i < 0x500; i++) {
+			if (*(psStub + i) == 0xe8) {
+				LONG offset = *(LONG*)(psStub + i + 1);
+				pspStub = psStub + i + 5 + offset;
+				break;
+			}
+		}
+		if (!pspStub) return;
+		DbgPrint("[CallbackEnum] PspSetCreateProcessNotifyRoutine : %p", pspStub);
+
+		for (SIZE_T i = 0; i < 0x500; ++i) {
+			if (*(pspStub + i) == 0x4C && *(pspStub + i + 1) == 0x8D && *(pspStub + i + 2) == 0x2D) {
+				LONG offset = *(LONG*)(pspStub + i + 3);
+				PUCHAR pTable = pspStub + i + 7 + offset;    // nt!PspCreateProcessNotifyRoutine
+				if (!MmIsAddressValid(pTable))                 // ----- // FIX 2
+					return;
+				DbgPrint("[CallbackEnum] PspCreateProcessNotifyRoutine : %p", pspStub);
+
+				SIZE_T nbCB = 0;
+				for (int x = 0; x < 64; ++x)
+				{
+					ULONG_PTR entry = *(ULONG_PTR*)(pTable + x * sizeof(ULONG_PTR));
+
+					PVOID callbackAddr = *(PVOID*)((entry & ~0xf) + 0x8); // +0x8 offset de la fonction
+					DbgPrint("[CallbackEnum] [%d]Callback : %p", x, pspStub);
+
+					buffer[nbCB++] = (ULONG64)callbackAddr;
+				}
+
+				*count = nbCB;
+				break;
+			}
+		}
+	} __except (EXCEPTION_EXECUTE_HANDLER) {
+		DbgPrint("[CallbackEnum] exception 0x%X", GetExceptionCode());
+		*count = 0;
+	}
+}
+
 
 namespace callbackEnum {
 	namespace ioctl_codes {
@@ -24,16 +73,16 @@ namespace callbackEnum {
 	}
 
 	struct REQUEST {
-		ULONG buffer[500];
+		ULONG64 buffer[500];
 		SIZE_T count;
 	};
 
 	NTSTATUS create_close(PDEVICE_OBJECT ioctl_device, PIRP irp) {
-		//irp - est l'object qui contient des donnes de l'IOCTL
-		UNREFERENCED_PARAMETER(ioctl_device);
+		irp->IoStatus.Status = STATUS_SUCCESS;
+		irp->IoStatus.Information = 0;
 
 		IoCompleteRequest(irp, IO_NO_INCREMENT);
-		return irp->IoStatus.Status;
+		return STATUS_SUCCESS;
 	}
 
 	NTSTATUS device_ctl(PDEVICE_OBJECT ioctl_device, PIRP irp) {
@@ -58,10 +107,13 @@ namespace callbackEnum {
 		switch (ctl_code)
 		{
 		case ioctl_codes::processCallbackEnum:
+			DbgPrint("[CallbackEnum] do process callback");
 			do_enumProcessCallbacks(req->buffer, &(req->count));
+			status = STATUS_SUCCESS;
 			break;
 		default:
 			DbgPrint("[CallbackEnum] CTL code non reconnu.");
+			status = STATUS_INVALID_DEVICE_REQUEST;
 			break;
 		}
 
@@ -71,14 +123,6 @@ namespace callbackEnum {
 		IoCompleteRequest(irp, IO_NO_INCREMENT);
 		return status;
 	}
-}
-
-VOID do_enumProcessCallbacks(PULONG buffer, PSIZE_T count) {
-	const ULONG dummy[] = { 0xDEADBEEF, 0xCAFEBABE, 0xBAADF00D };
-	const SIZE_T nb = RTL_NUMBER_OF(dummy);
-
-	RtlCopyMemory(buffer, dummy, nb * sizeof(ULONG));
-	*count = nb;
 }
 
 

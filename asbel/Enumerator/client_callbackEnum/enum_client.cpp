@@ -15,14 +15,15 @@ namespace callbackEnum {
     }
 
     struct REQUEST {
-        ULONG buffer[MAX_CALLBACKS];
+        ULONG64 buffer[MAX_CALLBACKS];
         SIZE_T count;
     };
 
     bool enumProccessCallbacks(HANDLE hDriver) {
         REQUEST recv_req = {};
+        DWORD bytes = 0;
 
-        bool status = DeviceIoControl(hDriver, ioctl_codes::processCallbackEnum, /*input : none*/&recv_req, sizeof(recv_req), &recv_req, sizeof(recv_req), nullptr, nullptr);
+        bool status = DeviceIoControl(hDriver, ioctl_codes::processCallbackEnum, /*input : none*/&recv_req, sizeof(recv_req), &recv_req, sizeof(recv_req), &bytes, nullptr);
 
         if (!status) return false;
 
@@ -35,26 +36,26 @@ namespace callbackEnum {
 }
 
 int main() {
-
+    std::cout << "Récupération du handle du driver\n";
     const HANDLE enum_drv = CreateFile(DRIVER_NAME, GENERIC_READ, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
 
     if (enum_drv == INVALID_HANDLE_VALUE) {
         std::cout << "Erreur du chargement du driver.\n";
-        std::cin.get();
         return 1;
     }
+    std::cout << "Handle du Driver récupéré avec succès!\n";
 
-
+    std::cout << "Envoie de l'IOCTL d'énumération des callbacks processes\n";
     if (callbackEnum::enumProccessCallbacks(enum_drv)) {
         std::cout << "Process callbacks : " << proc_cb_cnt << "\n";
         for (size_t i = 0; i < proc_cb_cnt; ++i)
             std::cout << "  [" << i << "] 0x" << std::hex << proc_cb[i] << std::dec << '\n';
     }
-    else
-    {
-        std::cerr << "IOCTL failed (" << GetLastError() << ").\n";
+    else {
+        std::cout << "IOCTL failed (" << GetLastError() << ").\n";
     }
 
-
+    std::cout << "Appuyez sur Entrée pour quitter...";
+    std::cin.get();
     return 0;
 }
