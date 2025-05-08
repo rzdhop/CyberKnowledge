@@ -4,14 +4,21 @@
 
 #define MAX_CALLBACKS       500
 #define DRIVER_NAME         L"\\\\.\\CallbackEnum"
-#define IOCTL_ENUM_PROC_CB  CTL_CODE(FILE_DEVICE_UNKNOWN, 0x501, METHOD_BUFFERED, FILE_SPECIAL_ACCESS)
 
-ULONG proc_cb[MAX_CALLBACKS] = { 0 };
+#define IOCTL_ENUM_PROC_CB  CTL_CODE(FILE_DEVICE_UNKNOWN, 0x501, METHOD_BUFFERED, FILE_SPECIAL_ACCESS)
+#define IOCTL_ENUM_THRD_CB  CTL_CODE(FILE_DEVICE_UNKNOWN, 0x502, METHOD_BUFFERED, FILE_SPECIAL_ACCESS)
+#define IOCTL_ENUM_LIMG_CB  CTL_CODE(FILE_DEVICE_UNKNOWN, 0x503, METHOD_BUFFERED, FILE_SPECIAL_ACCESS)
+#define IOCTL_ENUM_CMRG_CB  CTL_CODE(FILE_DEVICE_UNKNOWN, 0x504, METHOD_BUFFERED, FILE_SPECIAL_ACCESS)
+
+ULONGLONG proc_cb[MAX_CALLBACKS] = { 0 };
 SIZE_T proc_cb_cnt = 0;
 
 namespace callbackEnum {
     namespace ioctl_codes {
         constexpr ULONG processCallbackEnum = IOCTL_ENUM_PROC_CB;
+        constexpr ULONG threadCallbackEnum = IOCTL_ENUM_THRD_CB;
+        constexpr ULONG limagesCallbackEnum = IOCTL_ENUM_LIMG_CB;
+        constexpr ULONG cmregsCallbackEnum = IOCTL_ENUM_CMRG_CB;
     }
 
     struct REQUEST {
@@ -19,40 +26,89 @@ namespace callbackEnum {
         SIZE_T count;
     };
 
-    bool enumProccessCallbacks(HANDLE hDriver) {
+    bool do_enumCallback(HANDLE hDriver, ULONG callbackType) {
         REQUEST recv_req = {};
         DWORD bytes = 0;
 
-        bool status = DeviceIoControl(hDriver, ioctl_codes::processCallbackEnum, /*input : none*/&recv_req, sizeof(recv_req), &recv_req, sizeof(recv_req), &bytes, nullptr);
+        bool status = DeviceIoControl(hDriver, callbackType, /*input : none*/&recv_req, sizeof(recv_req), &recv_req, sizeof(recv_req), &bytes, nullptr);
 
         if (!status) return false;
 
         SIZE_T to_cpy = (recv_req.count > MAX_CALLBACKS) ? MAX_CALLBACKS : recv_req.count;
-        memcpy_s(proc_cb, sizeof(proc_cb), recv_req.buffer, to_cpy * sizeof(ULONG));
+        memcpy_s(proc_cb, sizeof(proc_cb), recv_req.buffer, to_cpy * sizeof(ULONGLONG));
         proc_cb_cnt = recv_req.count;
 
         return proc_cb_cnt > 0;
     }
+
 }
 
 int main() {
+    int choice;
     std::cout << "Récupération du handle du driver\n";
-    const HANDLE enum_drv = CreateFile(DRIVER_NAME, GENERIC_READ, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    const HANDLE enum_drv = CreateFile(DRIVER_NAME, GENERIC_ALL, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 
     if (enum_drv == INVALID_HANDLE_VALUE) {
         std::cout << "Erreur du chargement du driver.\n";
         return 1;
     }
     std::cout << "Handle du Driver récupéré avec succès!\n";
+    
+    bool loop = true;
+    while (loop) {
+        printf("+----asbel's Enumerator--+\n");
+        printf("|                        |\n");
+        printf("|    1) Processes        |\n");
+        printf("|    2) Threads          |\n");
+        printf("|    3) LoadImages       |\n");
+        printf("|    4) Registes (CmRegs)|\n");
+        printf("|                        |\n");
+        printf("|    0) Exit             |\n");
+        printf("|                        |\n");
+        printf("+-- Choice: ");
+        std::cin >> choice;
 
-    std::cout << "Envoie de l'IOCTL d'énumération des callbacks processes\n";
-    if (callbackEnum::enumProccessCallbacks(enum_drv)) {
-        std::cout << "Process callbacks : " << proc_cb_cnt << "\n";
-        for (size_t i = 0; i < proc_cb_cnt; ++i)
-            std::cout << "  [" << i << "] 0x" << std::hex << proc_cb[i] << std::dec << '\n';
-    }
-    else {
-        std::cout << "IOCTL failed (" << GetLastError() << ").\n";
+        switch (choice) {
+        case 1:
+            if (callbackEnum::do_enumCallback(enum_drv, callbackEnum::ioctl_codes::processCallbackEnum)) {
+                std::cout << "Process callbacks : " << proc_cb_cnt << "\n";
+                for (size_t i = 0; i < proc_cb_cnt; ++i)
+                    std::cout << "  [" << i << "] 0x" << std::hex << proc_cb[i] << std::dec << '\n';
+            }
+            else std::cout << "IOCTL failed (" << GetLastError() << ").\n";
+            break;
+        case 2:
+            if (callbackEnum::do_enumCallback(enum_drv, callbackEnum::ioctl_codes::threadCallbackEnum)) {
+                std::cout << "Threads callbacks : " << proc_cb_cnt << "\n";
+                for (size_t i = 0; i < proc_cb_cnt; ++i)
+                    std::cout << "  [" << i << "] 0x" << std::hex << proc_cb[i] << std::dec << '\n';
+            }
+            else std::cout << "IOCTL failed (" << GetLastError() << ").\n";
+            break;
+        case 3:
+            if (callbackEnum::do_enumCallback(enum_drv, callbackEnum::ioctl_codes::limagesCallbackEnum)) {
+                std::cout << "Load images callbacks : " << proc_cb_cnt << "\n";
+                for (size_t i = 0; i < proc_cb_cnt; ++i)
+                    std::cout << "  [" << i << "] 0x" << std::hex << proc_cb[i] << std::dec << '\n';
+            }
+            else std::cout << "IOCTL failed (" << GetLastError() << ").\n";
+            break;
+        case 4:
+            if (callbackEnum::do_enumCallback(enum_drv, callbackEnum::ioctl_codes::cmregsCallbackEnum)) {
+                std::cout << "Load images callbacks : " << proc_cb_cnt << "\n";
+                for (size_t i = 0; i < proc_cb_cnt; ++i)
+                    std::cout << "  [" << i << "] 0x" << std::hex << proc_cb[i] << std::dec << '\n';
+            }
+            else std::cout << "IOCTL failed (" << GetLastError() << ").\n";
+            break;
+        case 0:
+            printf("\n[-] Bye !");
+            loop = false;
+            break;
+        default:
+            printf("Unknown choice!\n");
+            break;
+        }
     }
 
     std::cout << "Appuyez sur Entrée pour quitter...";
