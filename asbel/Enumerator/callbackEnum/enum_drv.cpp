@@ -1,9 +1,12 @@
 ﻿#include <ntifs.h>
  
-#define IOCTL_ENUM_PROC_CB CTL_CODE(FILE_DEVICE_UNKNOWN, 0x501, METHOD_BUFFERED, FILE_SPECIAL_ACCESS)
+#define IOCTL_ENUM_PROC_CB	CTL_CODE(FILE_DEVICE_UNKNOWN, 0x501, METHOD_BUFFERED, FILE_SPECIAL_ACCESS)
 #define IOCTL_ENUM_THRD_CB  CTL_CODE(FILE_DEVICE_UNKNOWN, 0x502, METHOD_BUFFERED, FILE_SPECIAL_ACCESS)
 #define IOCTL_ENUM_LIMG_CB  CTL_CODE(FILE_DEVICE_UNKNOWN, 0x503, METHOD_BUFFERED, FILE_SPECIAL_ACCESS)
 #define IOCTL_ENUM_CMRG_CB  CTL_CODE(FILE_DEVICE_UNKNOWN, 0x504, METHOD_BUFFERED, FILE_SPECIAL_ACCESS)
+#define IOCTL_ENUM_PSOB_CB  CTL_CODE(FILE_DEVICE_UNKNOWN, 0x505, METHOD_BUFFERED, FILE_SPECIAL_ACCESS)
+#define IOCTL_ENUM_THOB_CB  CTL_CODE(FILE_DEVICE_UNKNOWN, 0x506, METHOD_BUFFERED, FILE_SPECIAL_ACCESS)
+#define IOCTL_ENUM_DKOB_CB  CTL_CODE(FILE_DEVICE_UNKNOWN, 0x507, METHOD_BUFFERED, FILE_SPECIAL_ACCESS)
 
 //Define Unexported/Undocumented function from ntifs.h
 extern "C" {
@@ -18,6 +21,48 @@ extern "C" {
 												 PSIZE_T ReturnSize);
 	*/
 }
+typedef struct _OBJECT_TYPE_INITIALIZER
+{
+	CHAR Length; //Pas trouvé le type WORD de 2 bytes donc 2 char de 1bytes
+	CHAR _Length;
+	UCHAR ObjectTypeFlags;
+	ULONG CaseInsensitive : 1;
+	ULONG UnnamedObjectsOnly : 1;
+	ULONG UseDefaultObject : 1;
+	ULONG SecurityRequired : 1;
+	ULONG MaintainHandleCount : 1;
+	ULONG MaintainTypeList : 1;
+	ULONG ObjectTypeCode;
+	ULONG InvalidAttributes;
+	GENERIC_MAPPING GenericMapping;
+	ULONG ValidAccessMask;
+	POOL_TYPE PoolType;
+	ULONG DefaultPagedPoolCharge;
+	ULONG DefaultNonPagedPoolCharge;
+	PVOID DumpProcedure;
+	LONG* OpenProcedure;
+	PVOID CloseProcedure;
+	PVOID DeleteProcedure;
+	LONG* ParseProcedure;
+	LONG* SecurityProcedure;
+	LONG* QueryNameProcedure;
+	UCHAR* OkayToCloseProcedure;
+} OBJECT_TYPE_INITIALIZER, * POBJECT_TYPE_INITIALIZER;
+
+typedef struct _OBJECT_TYPE {
+	_LIST_ENTRY TypeList;
+	_UNICODE_STRING Name;
+	VOID* DefaultObject;
+	unsigned char Index;
+	unsigned long TotalNumberOfObjects;
+	unsigned long TotalNumberOfHandles;
+	unsigned long HighWaterNumberOfObjects;
+	unsigned long HighWaterNumberOfHandles;
+	OBJECT_TYPE_INITIALIZER TypeInfo;
+	EX_PUSH_LOCK TypeLock;
+	unsigned long Key;
+	LIST_ENTRY CallbackList;
+} OBJECT_TYPE, *POBJECT_TYPE;
 
 typedef struct _CMREG_CALLBACK {
 	LIST_ENTRY List;
@@ -213,12 +258,33 @@ REQUEST do_enumCmRegisterCallbacks() {
 	return ret_req;
 }
 
+REQUEST do_enumProcessObjectCallbacks() {
+	REQUEST ret_req = {};
+	UNICODE_STRING us = RTL_CONSTANT_STRING(L"PsProcessType");
+	POBJECT_TYPE psType = (POBJECT_TYPE)MmGetSystemRoutineAddress(&us);
+}
+
+REQUEST do_enumThreadObjectCallbacks() {
+	REQUEST ret_req = {};
+	UNICODE_STRING us = RTL_CONSTANT_STRING(L"PsThreadType");
+	POBJECT_TYPE thType = (POBJECT_TYPE)MmGetSystemRoutineAddress(&us);
+}
+
+REQUEST do_enumDesktopObjectCallbacks() {
+	REQUEST ret_req = {};
+	UNICODE_STRING us = RTL_CONSTANT_STRING(L"ExDesktopObjectType");
+	POBJECT_TYPE dkType = (POBJECT_TYPE)MmGetSystemRoutineAddress(&us);
+}
+
 namespace callbackEnum {
 	namespace ioctl_codes {
-		constexpr ULONG processCallbackEnum = IOCTL_ENUM_PROC_CB;
-		constexpr ULONG threadCallbackEnum = IOCTL_ENUM_THRD_CB;
-		constexpr ULONG limagesCallbackEnum = IOCTL_ENUM_LIMG_CB;
-		constexpr ULONG cmregsCallbackEnum = IOCTL_ENUM_CMRG_CB;
+		constexpr ULONG processCallbackEnum		= IOCTL_ENUM_PROC_CB;
+		constexpr ULONG threadCallbackEnum		= IOCTL_ENUM_THRD_CB;
+		constexpr ULONG limagesCallbackEnum		= IOCTL_ENUM_LIMG_CB;
+		constexpr ULONG cmregsCallbackEnum		= IOCTL_ENUM_CMRG_CB;
+		constexpr ULONG psregsCallbackEnum		= IOCTL_ENUM_PSOB_CB;
+		constexpr ULONG thregsCallbackEnum		= IOCTL_ENUM_THOB_CB;
+		constexpr ULONG dkregsCallbackEnum		= IOCTL_ENUM_DKOB_CB;
 	}
 
 	NTSTATUS create_close(PDEVICE_OBJECT ioctl_device, PIRP irp) {
@@ -265,6 +331,18 @@ namespace callbackEnum {
 			break;
 		case ioctl_codes::cmregsCallbackEnum:
 			resp_req = do_enumCmRegisterCallbacks();
+			status = STATUS_SUCCESS;
+			break;
+		case ioctl_codes::psregsCallbackEnum:
+			resp_req = do_enumProcessObjectCallbacks();
+			status = STATUS_SUCCESS;
+			break;
+		case ioctl_codes::thregsCallbackEnum:
+			resp_req = do_enumThreadObjectCallbacks();
+			status = STATUS_SUCCESS;
+			break;
+		case ioctl_codes::dkregsCallbackEnum:
+			resp_req = do_enumDesktopObjectCallbacks();
 			status = STATUS_SUCCESS;
 			break;
 		default:
