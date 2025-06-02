@@ -21,6 +21,7 @@ extern "C" {
 												 PSIZE_T ReturnSize);
 	*/
 }
+
 typedef struct _OBJECT_TYPE_INITIALIZER
 {
 	CHAR Length; //Pas trouvé le type WORD de 2 bytes donc 2 char de 1bytes
@@ -48,6 +49,15 @@ typedef struct _OBJECT_TYPE_INITIALIZER
 	LONG* QueryNameProcedure;
 	UCHAR* OkayToCloseProcedure;
 } OBJECT_TYPE_INITIALIZER, * POBJECT_TYPE_INITIALIZER;
+
+
+typedef struct _OB_CALLBACK_ENTRY {
+	_LIST_ENTRY callbacklist;
+	ULONG FLAG;
+	ULONG RegistrationContext;
+	ULONG PsProcessType;
+	ULONG CallbackAddr;
+}OB_CALLBACK_ENTRY, *POB_CALLBACK_ENTRY;
 
 typedef struct _OBJECT_TYPE {
 	_LIST_ENTRY TypeList;
@@ -258,10 +268,27 @@ REQUEST do_enumCmRegisterCallbacks() {
 	return ret_req;
 }
 
-REQUEST do_enumProcessObjectCallbacks() {
-	REQUEST ret_req = {};
+REQUEST do_enumProcessObjectCallbacks(void)
+{
+	REQUEST ret = { 0 };
+
 	UNICODE_STRING us = RTL_CONSTANT_STRING(L"PsProcessType");
-	POBJECT_TYPE psType = (POBJECT_TYPE)MmGetSystemRoutineAddress(&us);
+	POBJECT_TYPE* ppProcType = (POBJECT_TYPE*)MmGetSystemRoutineAddress(&us);
+	POBJECT_TYPE procType = *ppProcType;
+ 
+	//ExAcquirePushLockShared(&procType->TypeLock);
+
+	PLIST_ENTRY head = &procType->CallbackList; //offset 0xc8
+	for (PLIST_ENTRY node = head->Flink; node != head; node = node->Flink)
+	{
+		POB_CALLBACK_ENTRY entry = CONTAINING_RECORD(node, OB_CALLBACK_ENTRY, CallbackAddr);
+
+		ret.buffer[ret.count++] = (ULONG64)entry;
+
+	}
+
+	//ExReleasePushLockShared(&procType->TypeLock);
+	return ret;
 }
 
 REQUEST do_enumThreadObjectCallbacks() {
