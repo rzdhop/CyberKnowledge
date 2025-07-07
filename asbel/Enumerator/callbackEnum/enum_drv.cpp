@@ -284,7 +284,6 @@ REQUEST do_enumProcessObjectCallbacks(void)
 		POB_CALLBACK_ENTRY entry = CONTAINING_RECORD(node, OB_CALLBACK_ENTRY, CallbackAddr);
 
 		ret.buffer[ret.count++] = (ULONG64)entry;
-
 	}
 
 	//ExReleasePushLockShared(&procType->TypeLock);
@@ -292,15 +291,41 @@ REQUEST do_enumProcessObjectCallbacks(void)
 }
 
 REQUEST do_enumThreadObjectCallbacks() {
-	REQUEST ret_req = {};
+	REQUEST ret = { 0 };
+
 	UNICODE_STRING us = RTL_CONSTANT_STRING(L"PsThreadType");
-	POBJECT_TYPE thType = (POBJECT_TYPE)MmGetSystemRoutineAddress(&us);
+	POBJECT_TYPE* ppThreadType = (POBJECT_TYPE*)MmGetSystemRoutineAddress(&us);
+	POBJECT_TYPE threadType = *ppThreadType;
+
+
+	PLIST_ENTRY head = &threadType->CallbackList; //offset 0xc8
+	for (PLIST_ENTRY node = head->Flink; node != head; node = node->Flink)
+	{
+		POB_CALLBACK_ENTRY entry = CONTAINING_RECORD(node, OB_CALLBACK_ENTRY, CallbackAddr);
+
+		ret.buffer[ret.count++] = (ULONG64)entry;
+	}
+
+	return ret;
 }
 
 REQUEST do_enumDesktopObjectCallbacks() {
-	REQUEST ret_req = {};
+	REQUEST ret = { 0 };
+
 	UNICODE_STRING us = RTL_CONSTANT_STRING(L"ExDesktopObjectType");
-	POBJECT_TYPE dkType = (POBJECT_TYPE)MmGetSystemRoutineAddress(&us);
+	POBJECT_TYPE* ppDeskObjType = (POBJECT_TYPE*)MmGetSystemRoutineAddress(&us);
+	POBJECT_TYPE deskObjType = *ppDeskObjType;
+
+
+	PLIST_ENTRY head = &deskObjType->CallbackList; //offset 0xc8
+	for (PLIST_ENTRY node = head->Flink; node != head; node = node->Flink)
+	{
+		POB_CALLBACK_ENTRY entry = CONTAINING_RECORD(node, OB_CALLBACK_ENTRY, CallbackAddr);
+
+		ret.buffer[ret.count++] = (ULONG64)entry;
+	}
+
+	return ret;
 }
 
 namespace callbackEnum {

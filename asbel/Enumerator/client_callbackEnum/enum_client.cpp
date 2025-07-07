@@ -5,10 +5,13 @@
 #define MAX_CALLBACKS       500
 #define DRIVER_NAME         L"\\\\.\\CallbackEnum"
 
-#define IOCTL_ENUM_PROC_CB  CTL_CODE(FILE_DEVICE_UNKNOWN, 0x501, METHOD_BUFFERED, FILE_SPECIAL_ACCESS)
+#define IOCTL_ENUM_PROC_CB	CTL_CODE(FILE_DEVICE_UNKNOWN, 0x501, METHOD_BUFFERED, FILE_SPECIAL_ACCESS)
 #define IOCTL_ENUM_THRD_CB  CTL_CODE(FILE_DEVICE_UNKNOWN, 0x502, METHOD_BUFFERED, FILE_SPECIAL_ACCESS)
 #define IOCTL_ENUM_LIMG_CB  CTL_CODE(FILE_DEVICE_UNKNOWN, 0x503, METHOD_BUFFERED, FILE_SPECIAL_ACCESS)
 #define IOCTL_ENUM_CMRG_CB  CTL_CODE(FILE_DEVICE_UNKNOWN, 0x504, METHOD_BUFFERED, FILE_SPECIAL_ACCESS)
+#define IOCTL_ENUM_PSOB_CB  CTL_CODE(FILE_DEVICE_UNKNOWN, 0x505, METHOD_BUFFERED, FILE_SPECIAL_ACCESS)
+#define IOCTL_ENUM_THOB_CB  CTL_CODE(FILE_DEVICE_UNKNOWN, 0x506, METHOD_BUFFERED, FILE_SPECIAL_ACCESS)
+#define IOCTL_ENUM_DKOB_CB  CTL_CODE(FILE_DEVICE_UNKNOWN, 0x507, METHOD_BUFFERED, FILE_SPECIAL_ACCESS)
 
 ULONGLONG proc_cb[MAX_CALLBACKS] = { 0 };
 SIZE_T proc_cb_cnt = 0;
@@ -19,6 +22,9 @@ namespace callbackEnum {
         constexpr ULONG threadCallbackEnum = IOCTL_ENUM_THRD_CB;
         constexpr ULONG limagesCallbackEnum = IOCTL_ENUM_LIMG_CB;
         constexpr ULONG cmregsCallbackEnum = IOCTL_ENUM_CMRG_CB;
+        constexpr ULONG psobCallbackEnum = IOCTL_ENUM_PSOB_CB;
+        constexpr ULONG thobCallbackEnum = IOCTL_ENUM_THOB_CB;
+        constexpr ULONG dkobCallbackEnum = IOCTL_ENUM_DKOB_CB;
     }
 
     struct REQUEST {
@@ -56,15 +62,18 @@ int main() {
     
     bool loop = true;
     while (loop) {
-        printf("+----asbel's Enumerator--+\n");
-        printf("|                        |\n");
-        printf("|    1) Processes        |\n");
-        printf("|    2) Threads          |\n");
-        printf("|    3) LoadImages       |\n");
-        printf("|    4) Registes (CmRegs)|\n");
-        printf("|                        |\n");
-        printf("|    0) Exit             |\n");
-        printf("|                        |\n");
+        printf("+--- rzdhop's Enumerator ---+\n");
+        printf("|                           |\n");
+        printf("|    1) Processes           |\n");
+        printf("|    2) Threads             |\n");
+        printf("|    3) LoadImages          |\n");
+        printf("|    4) Registes (CmRegs)   |\n");
+        printf("|    5) Objects (Process)   |\n");
+        printf("|    6) Objects (Threads)   |\n");
+        printf("|    7) Objects (DesktopObj)|\n");
+        printf("|                           |\n");
+        printf("|    0) Exit                |\n");
+        printf("|                           |\n");
         printf("+-- Choice: ");
         std::cin >> choice;
 
@@ -95,7 +104,31 @@ int main() {
             break;
         case 4:
             if (callbackEnum::do_enumCallback(enum_drv, callbackEnum::ioctl_codes::cmregsCallbackEnum)) {
-                std::cout << "Load images callbacks : " << proc_cb_cnt << "\n";
+                std::cout << "Load registers callbacks : " << proc_cb_cnt << "\n";
+                for (size_t i = 0; i < proc_cb_cnt; ++i)
+                    std::cout << "  [" << i << "] 0x" << std::hex << proc_cb[i] << std::dec << '\n';
+            }
+            else std::cout << "IOCTL failed (" << GetLastError() << ").\n";
+            break;
+        case 5:
+            if (callbackEnum::do_enumCallback(enum_drv, callbackEnum::ioctl_codes::psobCallbackEnum)) {
+                std::cout << "Load Process objects callbacks : " << proc_cb_cnt << "\n";
+                for (size_t i = 0; i < proc_cb_cnt; ++i)
+                    std::cout << "  [" << i << "] 0x" << std::hex << proc_cb[i] << std::dec << '\n';
+            }
+            else std::cout << "IOCTL failed (" << GetLastError() << ").\n";
+            break;
+        case 6:
+            if (callbackEnum::do_enumCallback(enum_drv, callbackEnum::ioctl_codes::thobCallbackEnum)) {
+                std::cout << "Load Thread objects callbacks : " << proc_cb_cnt << "\n";
+                for (size_t i = 0; i < proc_cb_cnt; ++i)
+                    std::cout << "  [" << i << "] 0x" << std::hex << proc_cb[i] << std::dec << '\n';
+            }
+            else std::cout << "IOCTL failed (" << GetLastError() << ").\n";
+            break;
+        case 7:
+            if (callbackEnum::do_enumCallback(enum_drv, callbackEnum::ioctl_codes::dkobCallbackEnum)) {
+                std::cout << "Load Desktop objects callbacks : " << proc_cb_cnt << "\n";
                 for (size_t i = 0; i < proc_cb_cnt; ++i)
                     std::cout << "  [" << i << "] 0x" << std::hex << proc_cb[i] << std::dec << '\n';
             }
