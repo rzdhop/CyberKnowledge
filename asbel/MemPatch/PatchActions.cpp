@@ -6,7 +6,7 @@
 #include <vector>
 
 void listPatchActions(std::vector<patch_action> patch_tasks) {
-	printf("+----asbel's MemPatcher----+\n");
+	printf("+----rzdhop's MemPatcher----+\n");
 	printf("| Total patchs : %zu        |\n", patch_tasks.size());
 	for (int i = 0; i < patch_tasks.size(); i++) {
 		
