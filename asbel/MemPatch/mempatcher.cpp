@@ -20,7 +20,7 @@ int main(int argc, char** argv) {
     DWORD pID = -1;
     std::vector<patch_action> patch_tasks;
 
-    printf("+----asbel's MemPatcher----+\n");
+    printf("+----rzdhop's MemPatcher----+\n");
     printf("|                         |\n");
     printf("| Patch:                  |\n");
     printf("|    1) Create proces     |\n");
@@ -52,7 +52,7 @@ int main(int argc, char** argv) {
     bool loop = true;
 
     while (loop) {
-        printf("+----asbel's MemPatcher----+\n");
+        printf("+----rzdhop's MemPatcher----+\n");
         printf("|                         |\n");
         printf("| Menu (pID %lu):         |\n", pID);
         printf("|    1) dumMem            |\n");
